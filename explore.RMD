@@ -1,0 +1,285 @@
+# Date: 2022-01-29
+# Author: Someone who ~nows u
+
+# What Explore the East members want
+
+Load data and show the dimensions
+```{r}
+explore<-read.csv("in/exploreeast.csv")
+dim(explore)
+```
+# Column names
+```{r}
+colnames(explore)
+```
+
+```{r}
+tail(explore)
+```
+
+## Low attendence is main area of concern
+```{r}
+table(explore$meetupsAttended)
+```
+
+Meetup attendance by percentage
+```{r }
+# install.packages("ggplot2") # if error
+require(ggplot2)
+table(explore$meetupsAttended)/dim(explore)[1] 
+
+visitFrequency<-as.data.frame(table(explore$meetupsAttended))
+colnames(visitFrequency)<-c("attendances", "count")
+
+bp<-ggplot(visitFrequency, aes(x="",y=count,fill=attendances))+geom_bar(width=1,stat="identity")
+pieAttendences <- bp + coord_polar("y", start=0)
+
+pieAttendences
+```
+Therefore most people who join have never come to any events. Are many bots? 
+
+```{r}
+
+# no differences
+```
+## Lack of repeat visitors 
+
+## RSVP analysis
+
+# total RSVP Yes'
+```{r}
+sum(explore$RSVPedYes)
+```
+
+from the total of RSVPs
+```{r}
+sum(explore$totalRSVPs)
+```
+Are the locations not good
+
+Sort by descending locations
+get more than 4 frequency i.e. top 11 values
+```{r}
+## install.packages("dplyr") # if error
+require(dplyr)
+
+locations<-explore %>% count(location, sort = TRUE)
+dim(locations)
+write.csv(locations, "out/locationsDetail.csv")
+head(locations,11)
+```
+
+Occupation trade or profession, note there are mis-spellings, dendogram?
+```{r}
+occupation<-explore %>% count(tolower(whatIsYourOccupationTradeProfession), sort = TRUE)
+write.csv(occupation, "occupationsDetail.csv")
+head(occupation,11)
+```
+
+# hclust?
+```{r}
+dd <- dist(!is.na(explore$whatIsYourOccupationTradeProfession), method="euclidean")
+```
+
+# hobbies or interests
+```{r}
+# explore interests
+head(explore$whatAreYourHobbiesInterests)
+
+tail(explore$whatAreYourHobbiesInterests)
+```
+```{r}
+# remove blanks or NA
+sum(explore$whatAreYourHobbiesInterests=="")
+# 392/641 ~ 57% are empty string
+hobbies<-explore$whatAreYourHobbiesInterests[explore$whatAreYourHobbiesInterests!=""]
+```
+
+```{r echo=FALSE}
+# separate by commas
+# install.packages("stringr") # if error run this
+require(stringr)
+hobbiesEach<-tolower(str_trim(unlist(str_split(hobbies,","))))
+
+hobbiesAll<-tolower(str_trim(unlist(str_split(unlist(str_split(unlist(str_split(unlist(str_split(unlist(str_split(unlist(str_split(hobbies,",")),';')),'/+')),'/-')),"and")),"//"))))
+hobbiesAll<-hobbiesAll[hobbiesAll!='']
+
+# further clean up, as cannot differenciate between 
+which(hobbiesAll=="travelling sightseeing eating out museums art galleries theatre")
+hobbiesAll<-c(hobbiesAll,tail(unlist(str_split("travelling sightseeing museums art galleries theatre",' ')),5 ))
+hobbiesAll<-c(hobbiesAll, "eating out")
+hobbiesAll[495] <- "travelling"
+
+which(hobbiesAll=="walking reading rock cooking")
+hobbiesAll[452] <-"walking"
+hobbiesAll<-c(hobbiesAll,unlist(str_split("reading rock cooking",' ')))
+
+which(hobbiesAll=="walking theatre eating out")
+hobbiesAll[94] <- "eating out"
+hobbiesAll<-c(hobbiesAll, "walking", "theatre") 
+
+which(hobbiesAll=="travel cook fashion")
+hobbiesAll[155] <-"travel"
+hobbiesAll<-c(hobbiesAll, "cook", "fashion")
+
+which(hobbiesAll=="tennis anime")
+hobbiesAll[93]<-"tennis"
+hobbiesAll<-c(hobbiesAll,"anime")
+	
+which(hobbiesAll=="reading. writing. travelling.")
+hobbiesAll[549] <- "reading"
+hobbiesAll<-c(hobbiesAll,"writing","travelling")
+
+which(hobbiesAll=="reading. fitness")
+hobbiesAll[29] <- "reading"
+hobbiesAll<-c(hobbiesAll,"fitness")
+
+which(hobbiesAll=="cooking creative writing travel")
+hobbiesAll[632] <- "reading"
+hobbiesAll<-c(hobbiesAll,"creative", "writing", "travel")
+
+which(hobbiesAll=="cooking reading")
+hobbiesAll[601] <- "reading"
+hobbiesAll<-c(hobbiesAll,"cooking")
+
+write.csv(sort(hobbiesAll),"out/hobbiesAll.csv", row.names=FALSE)
+```
+
+View list of all hobbies
+```{r}
+View(sort(hobbiesAll))
+```
+
+Hobbies Count
+```{r}
+hobbiesCount<-table(sort(hobbiesAll))
+
+View(sort(hobbiesCount,decreasing=TRUE))
+```
+
+1/5 are travelling, reading 
+```{r}
+
+top15Hobbies<-head(sort(hobbiesCount,decreasing=TRUE),15)
+
+top15Hobbies
+```
+Some interests appear in more than one place 
+```{r}
+termsTravel<-c("travel in a previous life","travel","travels","travelling","traveling")
+length(which(hobbiesAll %in% termsTravel))
+
+termsReading<-c("reading","books","reading books", "a good book!","reading a good articles", "read a lot")
+length(which(hobbiesAll %in% termsReading))
+
+termsFood<-c("food","foodie", "eating", "eating out", "good food.", "food & culture")
+length(which(hobbiesAll %in% termsFood))
+
+```
+```{r}
+readingOther<-sum(grepl("read",hobbiesAll))+sum(grepl("book",hobbiesAll))
+readingOther
+```
+```{r}
+c(hobbiesAll[grepl("read",hobbiesAll)],hobbiesAll[grepl("book",hobbiesAll)])
+```
+
+Out of all travel terms
+```{r}
+length(which(hobbiesAll %in% termsTravel))/length(hobbiesCount)
+hobbiesAll[which(hobbiesAll %in% termsTravel)]
+```
+# 21% are travel related, 60 in total 
+:related terms 7 more explore + 3 for adventure + 1 sightseeing
+
+# Reading
+```{r}
+readingOther/length(hobbiesCount)
+# older method length(which(hobbiesAll %in% termsReading))/length(hobbiesCount)
+#old set
+hobbiesAll[which(hobbiesAll %in% termsReading)]
+```
+# 19% are reading related
+
+
+# Walking & hiking
+```{r}
+( sum(grepl("walking",hobbiesAll))+sum(grepl("hiking",hobbiesAll)) +sum(grepl("explor", hobbiesAll)) ) / length(hobbiesCount)
+sum(grepl("walking",hobbiesAll))+sum(grepl("hiking",hobbiesAll))
+c(hobbiesAll[grepl("walking",hobbiesAll)],hobbiesAll[grepl("hiking",hobbiesAll)], hobbiesAll[grepl("explor",hobbiesAll)])
+```
+# 14 % are walking/hiking related, 32 in total
+#:related 3 for adventure
+
+# Reading
+```{r}
+length(which(hobbiesAll %in% termsFood))/length(hobbiesCount)
+hobbiesAll[which(hobbiesAll %in% termsFood)]
+```
+# 9% are food related, 27 in total
+
+# Soccer / football
+```{r}
+( sum(grepl("football",hobbiesAll))+sum(grepl("soccer",hobbiesAll)) ) / length(hobbiesCount)
+sum(grepl("football",hobbiesAll))+sum(grepl("soccer",hobbiesAll))
+c(hobbiesAll[grepl("football",hobbiesAll)],hobbiesAll[grepl("soccer",hobbiesAll)])
+```
+# 7% are football related, 21 in total
+
+```{r}
+top15HobDf <- as.data.frame(top15Hobbies)
+colnames(top15HobDf) <- c("interests","Frequency")
+ggplot(top15HobDf,aes(x=interests, y=Frequency), s)+
+  geom_bar(stat="identity", aes(fill=interests )) + ggtitle("Top 15 not aggregated")
+```
+
+# Music
+
+```{r}
+hobbiesAll[grepl("music",hobbiesAll)]
+```
+
+```{r}
+travelling<-length(which(hobbiesAll %in% termsTravel))
+#readingOther # reading <-length(which(hobbiesAll %in% termsReading)) # OLDER
+walkingHiking<-sum(grepl("walking",hobbiesAll))+sum(grepl("hiking",hobbiesAll))
+food <- length(which(hobbiesAll %in% termsFood))
+social<-length(c(hobbiesAll[grepl("social",hobbiesAll)],hobbiesAll[grepl("meeting",hobbiesAll)]))
+football<-sum(grepl("football",hobbiesAll))+sum(grepl("soccer",hobbiesAll))
+
+xTop5<-c("travelling","reading", "walkingHiking","food", "football")
+yTop5<-c(travelling,readingOther,walkingHiking, food, football)
+top5 <- as.data.frame(cbind(x=xTop5,y=yTop5))
+
+bpTop5 <-ggplot(top5, aes(x=x,y=y)) + 
+  geom_bar(stat="identity", aes(fill=x), color="black")
+
+bpTop5 + scale_fill_hue() +xlab("interests") + ggtitle("Top 5 Hobbies") +ylab("count")
+```
+
+# Art
+```{r}
+termsArt<-c("art","arts","art galleries")
+length(which(hobbiesAll %in% termsArt))
+```
+
+```{r}
+# Want to search for a terms change "coffee" below
+term <- "coffee"
+hobbiesAll[grepl(term,hobbiesAll)] 
+
+#hobbiesCount<-table(sort(hobbiesAll))
+
+#View(sort(hobbiesCount,decreasing=TRUE))
+# last visit common
+# lastVisitedGroupOn # CLT
+## get max, and min (Today)
+```
+
+```{r}
+#View(sort(hobbiesAll))
+#sort(hobbiesAll)[530]
+View(sort(hobbies))
+```
+
+Could use stringr and boundary to find words!
